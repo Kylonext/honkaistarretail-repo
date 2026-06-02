@@ -6,7 +6,21 @@ const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
+
+// 1. Konfigurasi CORS Utama (Menambahkan OPTIONS ke dalam metode yang diizinkan)
+app.use(cors({ 
+    origin: '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+    allowedHeaders: ['Content-Type', 'Authorization'] 
+}));
+
+// 2. 🔥 KHUSUS VERCEL: Interceptor Preflight OPTIONS agar tidak memicu 'Redirect not allowed'
+app.options('*', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.sendStatus(200);
+});
 
 // Konfigurasi Connection Pool ke TiDB Cloud (Satu deklarasi konstan yang bersih)
 const db = mysql.createPool({
