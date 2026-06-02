@@ -1,5 +1,5 @@
 class Session {
-  static const String baseUrl = "https://honkaistarretail-repo.vercel.app/";
+  static const String baseUrl = "https://honkaistarretail-repo.vercel.app";
   
   static String token = "";
   static String username = "";
