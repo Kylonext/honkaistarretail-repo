@@ -1,6 +1,6 @@
 // Path: gachamerch-backend/server.js
 const express = require('express');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise'); // Menggunakan versi promise untuk async/await
 const cors = require('cors');
 const crypto = require('crypto');
 
@@ -8,8 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 
-const mysql = require('mysql2');
-
+// Konfigurasi Connection Pool ke TiDB Cloud (Satu deklarasi konstan yang bersih)
 const db = mysql.createPool({
     host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
     user: '4TX4DANzYZuX3cG.root',
@@ -24,15 +23,16 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// Cek koneksi untuk memastikan backend berhasil tersambung ke cloud
-db.getConnection((err, connection) => {
-    if (err) {
-        console.error('Gagal tersambung ke TiDB Cloud:', err.message);
-    } else {
-        console.log('Backend terhubung ke TiDB Cloud.');
+// Cek koneksi TiDB Cloud menggunakan metode asinkron (Promise) yang benar
+(async () => {
+    try {
+        const connection = await db.getConnection();
+        console.log('⚡ Sukses! Backend terhubung ke TiDB Cloud Serverless.');
         connection.release();
+    } catch (err) {
+        console.error('❌ Gagal tersambung ke TiDB Cloud:', err.message);
     }
-});
+})();
 
 // Cache map to bind dynamic runtime tokens back to usernames
 const tokenStorage = {}; 
@@ -171,4 +171,11 @@ app.delete('/api/resources/:id', authenticateToken, async (req, res) => {
     try { await db.query('DELETE FROM resources WHERE id = ?', [req.params.id]); res.json({ message: "Success" }); } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-app.listen(3000, () => console.log("BACKEND SECURED WITH DB CART ACTIVE ON PORT 3000"));
+// Penyesuaian port dinamis agar aman berjalan di lokal maupun serverless Vercel
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`BACKEND SECURED ON PORT ${PORT}`));
+}
+
+// Export modul app untuk dibaca Vercel Engine
+module.exports = app;
