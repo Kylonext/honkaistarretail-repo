@@ -20,7 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> login() async {
     if (!_formKey.currentState!.validate()) return;
     try {
-      // 🟢 FIXED: Menambahkan /api/ sebelum rute login
       final response = await http.post(
         Uri.parse('${Session.baseUrl}/api/login'),
         headers: {'Content-Type': 'application/json'},
@@ -29,6 +28,10 @@ class _LoginPageState extends State<LoginPage> {
           'password': _passwordController.text
         }),
       );
+
+      // 🟢 KUNCI FIX: Cek apakah widget masih nempel di layar setelah menunggu network response
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         Session.token = data['token'];
@@ -39,13 +42,14 @@ class _LoginPageState extends State<LoginPage> {
         showError(jsonDecode(response.body)['message'] ?? "Authentication Denied");
       }
     } catch (e) {
+      // 🟢 KUNCI FIX: Cek sebelum melempar SnackBar di blok catch
+      if (!mounted) return;
       showError("Connection Failed. Verify server status.");
     }
   }
 
   Future<void> loginWithOAuth(String provider) async {
     try {
-      // 🟢 FIXED: Menambahkan /api/ sebelum rute oauth-login
       final response = await http.post(
         Uri.parse('${Session.baseUrl}/api/oauth-login'),
         headers: {'Content-Type': 'application/json'},
@@ -54,19 +58,28 @@ class _LoginPageState extends State<LoginPage> {
           'provider': provider
         }),
       );
+
+      // 🟢 KUNCI FIX: Cek apakah widget masih aktif sebelum pindah halaman
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         Session.token = data['token'];
         Session.username = data['username'];
-        Session.role = 'user'; // SETS role to 'user' for normal consumer access
+        Session.role = 'user'; // Sets role to 'user' for normal consumer access
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
       }
     } catch (e) {
+      // 🟢 KUNCI FIX: Cek sebelum melempar SnackBar di blok catch OAuth
+      if (!mounted) return;
       showError("OAuth Portal Unreachable.");
     }
   }
 
   void showError(String msg) {
+    // 🟢 KUNCI FIX: Pastikan fungsi SnackBar tidak crash jika state defunct
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
       backgroundColor: Colors.redAccent,
