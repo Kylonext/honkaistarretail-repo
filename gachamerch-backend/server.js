@@ -8,11 +8,30 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 
+const mysql = require('mysql2');
+
 const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '', 
-    database: 'gachamerch'
+    host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
+    user: '4TX4DANzYZuX3cG.root',
+    password: 'cFQ0oqb59EVEYdrn',
+    database: 'test',
+    port: 4000,
+    ssl: {
+        rejectUnauthorized: true
+    },
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Cek koneksi untuk memastikan backend berhasil tersambung ke cloud
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('Gagal tersambung ke TiDB Cloud:', err.message);
+    } else {
+        console.log('Backend terhubung ke TiDB Cloud.');
+        connection.release();
+    }
 });
 
 // Cache map to bind dynamic runtime tokens back to usernames
