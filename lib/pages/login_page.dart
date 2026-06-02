@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in_web/google_sign_in_web.dart' as web; // <-- Import langsung package web
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -209,22 +210,27 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(54),
-                        side: BorderSide(color: primaryColor.withAlpha(100)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: Icon(Icons.g_mobiledata, color: primaryColor, size: 30),
-                      label: Text("Login with Google", style: TextStyle(color: textColor)),
-                      onPressed: _isLoading ? null : () async {
-                        try {
-                          await GoogleSignIn.instance.authenticate();
-                        } catch (e) {
-                          showError(e.toString());
-                        }
-                      },
-                    ),
+                    kIsWeb
+                        ? SizedBox(
+                            height: 54,
+                            child: web.renderButton(), // <-- Merender tombol bawaan Google SDK untuk Web
+                          )
+                        : OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(54),
+                              side: BorderSide(color: primaryColor.withAlpha(100)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: Icon(Icons.g_mobiledata, color: primaryColor, size: 30),
+                            label: Text("Login with Google", style: TextStyle(color: textColor)),
+                            onPressed: _isLoading ? null : () async {
+                              try {
+                                await GoogleSignIn.instance.authenticate(); // <-- Digunakan hanya untuk Mobile (Android/iOS)
+                              } catch (e) {
+                                showError(e.toString());
+                              }
+                            },
+                          ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
