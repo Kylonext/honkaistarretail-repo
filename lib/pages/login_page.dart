@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_web/google_sign_in_web.dart' as web; // <-- Import langsung package web
+import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -25,12 +25,18 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    
+    // Inisialisasi langsung menggunakan Client ID kamu agar presisi di Web & Mobile
     final GoogleSignIn signIn = GoogleSignIn.instance;
     unawaited(
-      signIn.initialize().then((_) {
+      signIn.initialize(
+        clientId: '1051554978105-ibm0j8t30fq96q2t4t7du91du6mqc20q.apps.googleusercontent.com',
+      ).then((_) {
         signIn.authenticationEvents
             .listen(_handleAuthenticationEvent)
             .onError(_handleAuthenticationError);
+        
+        // Cek sesi login lama (Silent Sign-In)
         signIn.attemptLightweightAuthentication();
       }),
     );
@@ -53,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleAuthenticationError(Object e) {
     if (!mounted) return;
-    showError("Google Authentication stream error");
+    showError("Google Authentication error: $e");
   }
 
   Future<void> loginWithGoogleReal(GoogleSignInAccount user) async {
@@ -210,10 +216,12 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
+                    
+                    // Tombol otomatis berubah sesuai platform running
                     kIsWeb
                         ? SizedBox(
                             height: 54,
-                            child: web.renderButton(), // <-- Merender tombol bawaan Google SDK untuk Web
+                            child: (GoogleSignInPlatform.instance as dynamic).renderButton(),
                           )
                         : OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
@@ -225,12 +233,13 @@ class _LoginPageState extends State<LoginPage> {
                             label: Text("Login with Google", style: TextStyle(color: textColor)),
                             onPressed: _isLoading ? null : () async {
                               try {
-                                await GoogleSignIn.instance.authenticate(); // <-- Digunakan hanya untuk Mobile (Android/iOS)
+                                await GoogleSignIn.instance.authenticate();
                               } catch (e) {
                                 showError(e.toString());
                               }
                             },
                           ),
+                    
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
