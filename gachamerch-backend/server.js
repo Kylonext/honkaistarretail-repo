@@ -1,6 +1,5 @@
-// Path: gachamerch-backend/server.js
 const express = require('express');
-const mysql = require('mysql2/promise'); // Driver async/await untuk TiDB
+const mysql = require('mysql2/promise');
 const cors = require('cors');
 const crypto = require('crypto');
 
@@ -8,7 +7,6 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 
-// Konfigurasi Pool TiDB Cloud Utama
 const db = mysql.createPool({
     host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
     user: '4TX4DANzYZuX3cG.root',
@@ -23,7 +21,6 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// Cek koneksi dasar ke database
 db.getConnection()
     .then(conn => {
         console.log('Backend terhubung ke TiDB Cloud.');
@@ -31,10 +28,8 @@ db.getConnection()
     })
     .catch(err => console.error('Gagal tersambung ke TiDB Cloud:', err.message));
 
-// Cache token di memori runtime
 const tokenStorage = {}; 
 
-// Middleware helper validasi token session
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     if (!authHeader) return res.status(401).json({ message: "Access Denied: Missing Token" });
@@ -46,7 +41,6 @@ function authenticateToken(req, res, next) {
     next(); 
 }
 
-// LOGIN UTAMA
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -65,17 +59,33 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// OAuth Bypass Endpoint
 app.post('/api/oauth-login', async (req, res) => {
-    const { username } = req.body;
-    const token = crypto.randomBytes(10).toString('hex');
-    tokenStorage[token] = username;
-    res.json({ token, username, role: 'user' });
+    const { email, username, provider } = req.body;
+    
+    if (provider === 'google' && email) {
+        try {
+            const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [email]);
+            let user;
+            
+            if (rows.length === 0) {
+                await db.query('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', [email, crypto.randomBytes(16).toString('hex'), 'user']);
+                user = { username: email, role: 'user' };
+            } else {
+                user = rows[0];
+            }
+            
+            const token = crypto.randomBytes(10).toString('hex');
+            tokenStorage[token] = user.username;
+            return res.json({ token, username: user.username, role: user.role });
+        } catch (err) {
+            return res.status(500).json({ message: "Database failure: " + err.message });
+        }
+    } else {
+        const token = crypto.randomBytes(10).toString('hex');
+        tokenStorage[token] = username;
+        res.json({ token, username, role: 'user' });
+    }
 });
-
-// ==========================================
-// CART ENDPOINTS
-// ==========================================
 
 app.get('/api/cart', authenticateToken, async (req, res) => {
     try {
@@ -123,10 +133,6 @@ app.post('/api/cart/checkout', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// ==========================================
-// CATALOG RESOURCE CRUDS
-// ==========================================
-
 app.get('/api/resources', async (req, res) => {
     try { const [rows] = await db.query('SELECT * FROM resources'); res.json(rows); } catch (err) { res.status(500).json({ message: err.message }); }
 });
@@ -153,10 +159,8 @@ app.delete('/api/resources/:id', authenticateToken, async (req, res) => {
     try { await db.query('DELETE FROM resources WHERE id = ?', [req.params.id]); res.json({ message: "Success" }); } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// WAJIB UNTUK VERCEL: Batasi port listen hanya untuk lokal dev
 if (process.env.NODE_ENV !== 'production') {
     app.listen(3000, () => console.log("BACKEND ACTIVE ON PORT 3000"));
 }
 
-// WAJIB UNTUK VERCEL: Ekspor aplikasi Express
 module.exports = app;
