@@ -1,3 +1,4 @@
+// Path: lib/pages/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -31,7 +32,12 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> fetchResources() async {
     try {
-      final response = await http.get(Uri.parse('${Session.baseUrl}/resources'));
+      // 🟢 FIXED: Menambahkan rute /api/ agar sesuai dengan endpoint Vercel Express kamu
+      final response = await http.get(Uri.parse('${Session.baseUrl}/api/resources'));
+      
+      // 🟢 FIXED: Amankan state agar tidak terjadi eror unmounted context saat render data
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         setState(() {
           resources = jsonDecode(response.body);
@@ -40,6 +46,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -68,7 +75,13 @@ class _HomePageState extends State<HomePage> {
             ),
           IconButton(icon: Icon(Icons.history, color: Theme.of(context).primaryColor), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryPage()))),
           IconButton(icon: Icon(Icons.info_outline, color: Theme.of(context).primaryColor), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage()))),
-          IconButton(icon: const Icon(Icons.logout, color: Colors.redAccent), onPressed: () { Session.clearSession(); Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage())); }),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.redAccent), 
+            onPressed: () { 
+              Session.clearSession(); 
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage())); 
+            }
+          ),
         ],
       ),
       body: isLoading 
