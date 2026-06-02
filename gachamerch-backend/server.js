@@ -14,7 +14,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'] 
 }));
 
-// 2. 🔥 KHUSUS VERCEL: Interceptor Preflight OPTIONS agar tidak memicu 'Redirect not allowed'
+// 2. KHUSUS VERCEL: Interceptor Preflight OPTIONS agar tidak memicu 'Redirect not allowed'
 app.options('*', (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
@@ -22,7 +22,7 @@ app.options('*', (req, res) => {
     res.sendStatus(200);
 });
 
-// Konfigurasi Connection Pool ke TiDB Cloud (Satu deklarasi konstan yang bersih)
+// Konfigurasi Connection Pool ke TiDB Cloud
 const db = mysql.createPool({
     host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
     user: '4TX4DANzYZuX3cG.root',
@@ -126,13 +126,18 @@ app.post('/api/cart', authenticateToken, async (req, res) => {
     }
 });
 
-// REMOVE ENTRY FROM CART
+// REMOVE ENTRY FROM CART (FIXED Parameter validation for serverless)
 app.delete('/api/cart/:id', authenticateToken, async (req, res) => {
+    const cartId = req.params.id || req.query.id;
+    const username = req.username;
+
+    if (!cartId) return res.status(400).json({ message: "Missing item ID" });
+
     try {
-        await db.query('DELETE FROM cart WHERE id = ? AND username = ?', [req.params.id, req.username]);
+        await db.query('DELETE FROM cart WHERE id = ? AND username = ?', [cartId, username]);
         res.json({ message: "Dropped item from database cart entry." });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: "Database failure: " + err.message });
     }
 });
 
@@ -163,12 +168,19 @@ app.get('/api/resources', async (req, res) => {
     try { const [rows] = await db.query('SELECT * FROM resources'); res.json(rows); } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// GET RESOURCE BY ID (FIXED Parameter validation for serverless)
 app.get('/api/resources/:id', authenticateToken, async (req, res) => {
+    const resourceId = req.params.id || req.query.id;
+
+    if (!resourceId) return res.status(400).json({ message: "Missing resource ID" });
+
     try {
-        const [rows] = await db.query('SELECT * FROM resources WHERE id = ?', [req.params.id]);
+        const [rows] = await db.query('SELECT * FROM resources WHERE id = ?', [resourceId]);
         if (rows.length === 0) return res.status(404).json({ message: "Not found" });
         res.json(rows[0]);
-    } catch (err) { res.status(500).json({ message: err.message }); }
+    } catch (err) { 
+        res.status(500).json({ message: "Database failure: " + err.message }); 
+    }
 });
 
 app.post('/api/resources', authenticateToken, async (req, res) => {
@@ -177,12 +189,14 @@ app.post('/api/resources', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/resources/:id', authenticateToken, async (req, res) => {
+    const resourceId = req.params.id || req.query.id;
     const { name, type, description, stock, image_url, price } = req.body;
-    try { await db.query('UPDATE resources SET name=?, type=?, description=?, stock=?, image_url=?, price=? WHERE id=?', [name, type, description, stock, image_url, price, req.params.id]); res.json({ message: "Success" }); } catch (err) { res.status(500).json({ message: err.message }); }
+    try { await db.query('UPDATE resources SET name=?, type=?, description=?, stock=?, image_url=?, price=? WHERE id=?', [name, type, description, stock, image_url, price, resourceId]); res.json({ message: "Success" }); } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 app.delete('/api/resources/:id', authenticateToken, async (req, res) => {
-    try { await db.query('DELETE FROM resources WHERE id = ?', [req.params.id]); res.json({ message: "Success" }); } catch (err) { res.status(500).json({ message: err.message }); }
+    const resourceId = req.params.id || req.query.id;
+    try { await db.query('DELETE FROM resources WHERE id = ?', [resourceId]); res.json({ message: "Success" }); } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 // Penyesuaian port dinamis agar aman berjalan di lokal maupun serverless Vercel
