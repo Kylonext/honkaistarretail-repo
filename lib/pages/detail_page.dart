@@ -23,12 +23,20 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> loadDetails() async {
-    final response = await http.get(
-      Uri.parse('${Session.baseUrl}/resources/${widget.id}'),
-      headers: {'Authorization': 'Bearer ${Session.token}'},
-    );
-    if (response.statusCode == 200) {
-      setState(() { resource = jsonDecode(response.body); });
+    try {
+      // 🟢 FIXED: Menambahkan rute /api/
+      final response = await http.get(
+        Uri.parse('${Session.baseUrl}/api/resources/${widget.id}'),
+        headers: {'Authorization': 'Bearer ${Session.token}'},
+      );
+      
+      // 🟢 FIXED: Amankan jika widget unmounted selama network request
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        setState(() { resource = jsonDecode(response.body); });
+      }
+    } catch (_) {
     }
   }
 
@@ -38,17 +46,26 @@ class _DetailPageState extends State<DetailPage> {
       return;
     }
 
-    final response = await http.post(
-      Uri.parse('${Session.baseUrl}/cart'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${Session.token}'},
-      body: jsonEncode({'resource_id': resource!['id'], 'quantity': purchaseQty}),
-    );
-
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Saved item to your database schema cart!"), backgroundColor: Colors.green)
+    try {
+      final response = await http.post(
+        Uri.parse('${Session.baseUrl}/api/cart'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${Session.token}'},
+        body: jsonEncode({'resource_id': resource!['id'], 'quantity': purchaseQty}),
       );
-      Navigator.pop(context, true);
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Saved item to your database schema cart!"), backgroundColor: Colors.green)
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to connect to server."), backgroundColor: Colors.redAccent)
+      );
     }
   }
 
@@ -63,8 +80,8 @@ class _DetailPageState extends State<DetailPage> {
         elevation: 0,
         actions: Session.role == 'admin' ? [
           IconButton(icon: const Icon(Icons.edit), onPressed: () async {
-            await Navigator.push(context, MaterialPageRoute(builder: (_) => ManageResourcePage(resource: resource)));
-            loadDetails();
+            final updated = await Navigator.push(context, MaterialPageRoute(builder: (_) => ManageResourcePage(resource: resource)));
+            if (updated == true) loadDetails();
           }),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
@@ -80,12 +97,26 @@ class _DetailPageState extends State<DetailPage> {
                   ],
                 )
               );
+              
               if (confirm == true) {
-                final response = await http.delete(
-                  Uri.parse('${Session.baseUrl}/resources/${widget.id}'),
-                  headers: {'Authorization': 'Bearer ${Session.token}'},
-                );
-                if (response.statusCode == 200) Navigator.pop(context);
+                try {
+                  // 🟢 FIXED: Menambahkan rute /api/ untuk proses hapus admin
+                  final response = await http.delete(
+                    Uri.parse('${Session.baseUrl}/api/resources/${widget.id}'),
+                    headers: {'Authorization': 'Bearer ${Session.token}'},
+                  );
+                  
+                  if (!mounted) return;
+
+                  if (response.statusCode == 200) {
+                    Navigator.pop(context);
+                  }
+                } catch (_) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Delete query failed."), backgroundColor: Colors.redAccent)
+                  );
+                }
               }
             }
           )

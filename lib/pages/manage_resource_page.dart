@@ -1,3 +1,4 @@
+// Path: lib/pages/manage_resource_page.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -49,14 +50,18 @@ class _ManageResourcePageState extends State<ManageResourcePage> {
       'price': double.parse(_priceController.text.trim()),
     });
 
+    // 🟢 FIXED: Menambahkan rute /api/ di kedua kondisi URL
     final url = isEdit 
-        ? '${Session.baseUrl}/resources/${widget.resource!['id']}' 
-        : '${Session.baseUrl}/resources';
+        ? '${Session.baseUrl}/api/resources/${widget.resource!['id']}' 
+        : '${Session.baseUrl}/api/resources';
 
     try {
       final response = isEdit
           ? await http.put(Uri.parse(url), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${Session.token}'}, body: bodyData)
           : await http.post(Uri.parse(url), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${Session.token}'}, body: bodyData);
+
+      // 🟢 FIXED: Pastikan widget masih aktif setelah proses await http selesai
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -69,6 +74,8 @@ class _ManageResourcePageState extends State<ManageResourcePage> {
         );
       }
     } catch (_) {
+      // 🟢 FIXED: Amankan juga di dalam block catch sebelum memanggil context
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Network failure. Server unreachable."), backgroundColor: Colors.redAccent)
       );

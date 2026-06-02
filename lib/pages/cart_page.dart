@@ -1,3 +1,4 @@
+// Path: lib/pages/cart_page.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -21,10 +22,15 @@ class _CartPageState extends State<CartPage> {
 
   Future<void> loadDbCart() async {
     try {
+      // 🟢 FIXED: Menambahkan rute /api/
       final response = await http.get(
-        Uri.parse('${Session.baseUrl}/cart'),
+        Uri.parse('${Session.baseUrl}/api/cart'),
         headers: {'Authorization': 'Bearer ${Session.token}'},
       );
+      
+      // 🟢 FIXED: Amankan jika widget unmounted saat menunggu respon internet
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         setState(() {
           cartItems = jsonDecode(response.body);
@@ -32,6 +38,7 @@ class _CartPageState extends State<CartPage> {
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -41,36 +48,56 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> removeItem(int cartEntryId) async {
-    final response = await http.delete(
-      Uri.parse('${Session.baseUrl}/cart/$cartEntryId'),
-      headers: {'Authorization': 'Bearer ${Session.token}'},
-    );
-    if (response.statusCode == 200) {
-      loadDbCart();
+    try {
+      // 🟢 FIXED: Menambahkan rute /api/
+      final response = await http.delete(
+        Uri.parse('${Session.baseUrl}/api/cart/$cartEntryId'),
+        headers: {'Authorization': 'Bearer ${Session.token}'},
+      );
+      
+      // 🟢 FIXED: Amankan state context sebelum memuat ulang data database
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        loadDbCart();
+      }
+    } catch (_) {
+      // Menghindari unhandled async exception
     }
   }
 
   Future<void> checkout() async {
     if (cartItems.isEmpty) return;
 
-    final response = await http.post(
-      Uri.parse('${Session.baseUrl}/cart/checkout'),
-      headers: {'Authorization': 'Bearer ${Session.token}'},
-    );
+    try {
+      // 🟢 FIXED: Menambahkan rute /api/
+      final response = await http.post(
+        Uri.parse('${Session.baseUrl}/api/cart/checkout'),
+        headers: {'Authorization': 'Bearer ${Session.token}'},
+      );
 
-    if (response.statusCode == 200) {
-      for (var item in cartItems) {
-        Session.orderHistory.add("Dispatched ${item['quantity']}x ${item['name']}");
+      // 🟢 FIXED: Amankan context sebelum memunculkan AlerDialog UI
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        for (var item in cartItems) {
+          Session.orderHistory.add("Dispatched ${item['quantity']}x ${item['name']}");
+        }
+        
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Transaction Cleared!"),
+            content: const Text("Order pushed to database inventory changes successfully."),
+            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK"))],
+          ),
+        ).then((_) {
+          if (!mounted) return;
+          Navigator.pop(context, true);
+        });
       }
-      
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text("Transaction Cleared!"),
-          content: const Text("Order pushed to database inventory changes successfully."),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK"))],
-        ),
-      ).then((_) => Navigator.pop(context, true));
+    } catch (_) {
+      // Menghindari unhandled async exception
     }
   }
 
