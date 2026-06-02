@@ -20,8 +20,9 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> login() async {
     if (!_formKey.currentState!.validate()) return;
     try {
+      // 🟢 FIXED: Menambahkan /api/ sebelum rute login
       final response = await http.post(
-        Uri.parse('${Session.baseUrl}/login'),
+        Uri.parse('${Session.baseUrl}/api/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': _usernameController.text.trim(), 
@@ -44,8 +45,9 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> loginWithOAuth(String provider) async {
     try {
+      // 🟢 FIXED: Menambahkan /api/ sebelum rute oauth-login
       final response = await http.post(
-        Uri.parse('${Session.baseUrl}/oauth-login'),
+        Uri.parse('${Session.baseUrl}/api/oauth-login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': '${provider.toLowerCase()}_trailblazer', 
@@ -56,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
         final data = jsonDecode(response.body);
         Session.token = data['token'];
         Session.username = data['username'];
-        Session.role = 'user'; // CHANGED: Sets role to 'user' for normal consumer access
+        Session.role = 'user'; // SETS role to 'user' for normal consumer access
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
       }
     } catch (e) {
