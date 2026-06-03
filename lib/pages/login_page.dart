@@ -25,18 +25,22 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    
-    // Inisialisasi langsung menggunakan Client ID kamu agar presisi di Web & Mobile
     final GoogleSignIn signIn = GoogleSignIn.instance;
     unawaited(
       signIn.initialize(
         clientId: '1051554978105-ibm0j8t30fq96q2t4t7du91du6mqc20q.apps.googleusercontent.com',
-      ).then((_) {
+      ).then((_) async {
+        // HARD RESET CACHE: Memutus sesi Google sebelumnya agar 
+        // cache bersih total dan tidak memicu "Sign in as..." saat page di-refresh.
+        try {
+          await signIn.disconnect();
+        } catch (_) {
+          // Disconnect melempar error jika tidak ada cache, kita abaikan saja
+        }
+
         signIn.authenticationEvents
             .listen(_handleAuthenticationEvent)
             .onError(_handleAuthenticationError);
-        
-        // Cek sesi login lama (Silent Sign-In)
         signIn.attemptLightweightAuthentication();
       }),
     );
@@ -126,35 +130,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> loginWithOAuth(String provider) async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await http.post(
-        Uri.parse('${Session.baseUrl}/api/oauth-login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': '${provider.toLowerCase()}_trailblazer', 
-          'provider': provider
-        }),
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        Session.token = data['token'];
-        Session.username = data['username'];
-        Session.role = 'user';
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      showError("OAuth Portal Unreachable.");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   void showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -176,93 +151,85 @@ class _LoginPageState extends State<LoginPage> {
               padding: const EdgeInsets.all(30.0),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(Icons.auto_awesome, color: primaryColor, size: 60),
-                    const SizedBox(height: 16),
-                    Text("HONKAI STAR RETAIL", style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
-                    const SizedBox(height: 40),
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: const InputDecoration(labelText: "Username"),
-                      style: TextStyle(color: textColor),
-                      validator: (val) => (val == null || val.trim().isEmpty) ? "Field required" : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: "Password"),
-                      style: TextStyle(color: textColor),
-                      validator: (val) => (val == null || val.length < 6) ? "Password requires min 6 characters" : null,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(54)),
-                      onPressed: _isLoading ? null : login,
-                      child: const Text("LOGIN"),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text("OR", style: Theme.of(context).textTheme.bodyMedium),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 400), 
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Icon(Icons.auto_awesome, color: primaryColor, size: 60),
+                      const SizedBox(height: 16),
+                      Text(
+                        "HONKAI STAR RETAIL", 
+                        style: Theme.of(context).textTheme.headlineMedium, 
+                        textAlign: TextAlign.center
+                      ),
+                      const SizedBox(height: 40),
+                      TextFormField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(
+                          labelText: "Username",
+                          border: OutlineInputBorder(),
                         ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Tombol otomatis berubah sesuai platform running
-                    kIsWeb
-                        ? SizedBox(
-                            height: 54,
-                            child: (GoogleSignInPlatform.instance as dynamic).renderButton(),
-                          )
-                        : OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(54),
-                              side: BorderSide(color: primaryColor.withAlpha(100)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            icon: Icon(Icons.g_mobiledata, color: primaryColor, size: 30),
-                            label: Text("Login with Google", style: TextStyle(color: textColor)),
-                            onPressed: _isLoading ? null : () async {
-                              try {
-                                await GoogleSignIn.instance.authenticate();
-                              } catch (e) {
-                                showError(e.toString());
-                              }
-                            },
+                        style: TextStyle(color: textColor),
+                        validator: (val) => (val == null || val.trim().isEmpty) ? "Field required" : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: "Password",
+                          border: OutlineInputBorder(),
+                        ),
+                        style: TextStyle(color: textColor),
+                        validator: (val) => (val == null || val.length < 6) ? "Password requires min 6 characters" : null,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: _isLoading ? null : login,
+                        child: const Text("LOGIN", style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text("OR", style: Theme.of(context).textTheme.bodyMedium),
                           ),
-                    
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(54),
-                        side: BorderSide(color: primaryColor.withAlpha(100)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          const Expanded(child: Divider()),
+                        ],
                       ),
-                      icon: Icon(Icons.close, color: primaryColor, size: 22),
-                      label: Text("Login with X", style: TextStyle(color: textColor)),
-                      onPressed: _isLoading ? null : () => loginWithOAuth("X"),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(54),
-                        side: BorderSide(color: primaryColor.withAlpha(100)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: Icon(Icons.facebook, color: primaryColor, size: 24),
-                      label: Text("Login with Facebook", style: TextStyle(color: textColor)),
-                      onPressed: _isLoading ? null : () => loginWithOAuth("Facebook"),
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+                      kIsWeb
+                          ? SizedBox(
+                              height: 54,
+                              child: (GoogleSignInPlatform.instance as dynamic).renderButton(),
+                            )
+                          : OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(54),
+                                side: BorderSide(color: primaryColor.withAlpha(100)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: Icon(Icons.g_mobiledata, color: primaryColor, size: 30),
+                              label: Text("Sign in with Google", style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                              onPressed: _isLoading ? null : () async {
+                                try {
+                                  // Dikembalikan ke .authenticate() sesuai struktur package versi ini
+                                  await GoogleSignIn.instance.authenticate();
+                                } catch (e) {
+                                  showError(e.toString());
+                                }
+                              },
+                            ),
+                    ],
+                  ),
                 ),
               ),
             ),

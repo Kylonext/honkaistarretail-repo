@@ -62,9 +62,11 @@ flutter:
   uses-material-design: true
   assets:
     - assets/stellarjade.png
-    - assets/WelcomeToTheCosmicCity.jpg
-    - assets/ThusBurnsTheDawn.jpeg
-    - assets/Rendezvous.jpg
+    - assets/WelcomeToTheCosmicCity.png
+    - assets/ThusBurnsTheDawn.png
+    - assets/Rendezvous.png
+    - assets/InstantGaze.png
+    - assets/NightGlow.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
