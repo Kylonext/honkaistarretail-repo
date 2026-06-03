@@ -1,4 +1,4 @@
-# 🌌 Honkai Star Retail - Mobile Application
+# Honkai Star Retail - Application
 
 Aplikasi Retail bertema *Honkai Star Rail* yang dibangun menggunakan framework **Flutter** untuk sisi Client, serta terintegrasi dengan sistem otentikasi lokal dan **Google Sign-In Authentication**.
 
