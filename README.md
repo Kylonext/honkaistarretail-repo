@@ -21,7 +21,7 @@ Ikuti urutan perintah di bawah ini melalui terminal/command prompt di dalam dire
 ### 1. Clone atau Buka Folder Proyek
 Pastikan terminal kamu sudah berada di dalam root directory proyek `gachamerch`:
 ```Bash
-gachamerch
+cd gachamerch
 ```
 
 2. Unduh Dependencies (Package Fetch)
