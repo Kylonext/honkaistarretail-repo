@@ -159,7 +159,7 @@ class _ManageResourcePageState extends State<ManageResourcePage> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(54)),
                 onPressed: saveResource,
-                child: Text(isEdit ? "COMMIT MODIFICATIONS" : "ADD ITEM"),
+                child: Text(isEdit ? "EDIT ITEM" : "ADD ITEM"),
               ),
             ],
           ),

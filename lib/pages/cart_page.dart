@@ -159,7 +159,7 @@ class _CartPageState extends State<CartPage> {
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
                                 onPressed: checkout,
-                                child: const Text("EXECUTE TRANSACTION"),
+                                child: const Text("PURCHASE"),
                               )
                             ],
                           ),
