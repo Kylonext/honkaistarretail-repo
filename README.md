@@ -37,3 +37,12 @@ Jalankan aplikasi dalam mode pengembangan (Development Mode):
 ```Bash
 flutter run -d chrome --web-port=5000
 ```
+
+Tunggu sekitar 30-60 detik agar server backend bisa bootup terlebih dahulu, sampai web terbuka.
+
+Akun dummy yang bisa digunakan apabila tidak ingin menggunakan Google Sign-In:
+(Akun USER) : trailblazer
+(Password USER) : trailblazer123
+
+(Akun ADMIN) : pom-pom
+(Password ADMIN) : admin123
