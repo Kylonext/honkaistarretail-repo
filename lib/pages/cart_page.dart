@@ -104,11 +104,11 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Database Cart Ledger"), backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(title: const Text("Purchase Cart"), backgroundColor: Colors.transparent, elevation: 0),
       body: isLoading
           ? Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))
           : cartItems.isEmpty
-              ? const Center(child: Text("Database cart table is empty for your session."))
+              ? const Center(child: Text("Cart is curretnly empty for your session."))
               : Column(
                   children: [
                     Expanded(
